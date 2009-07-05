@@ -1,0 +1,17 @@
+This is a fork of MobileTerminal that complies with Apple's official SDK.  The
+plan is that pieces of the current MobileTerminal in /trunk/ will be ported
+over one piece at a time so that the entire system can build using the official
+toolchain headers (in an XCode project).
+
+Strategies to consider while porting:
+- Rewrite pieces from scratch using supported APIs when existing components
+  depend heavily on private headers.
+- Break down components by dependencies, to break some of the spaghetti that
+  has arisen over the years.  (A Subprocess package, a v100 package, etc)
+- When necessary, create local copies of private header files, or use local
+  declarations in .m files.
+
+The history of the project is that it was started before any official header
+files were released, and therefore uses unsupported headers.  Now it is simply
+much easier to use the standard set, with a handful of minor modifications
+instead.
