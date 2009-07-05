@@ -20,5 +20,6 @@
 
 - (void) testBasicInput;
 - (void) testResize;
+- (void) testMultipleLinesWithResizing;
 
 @end
