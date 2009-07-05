@@ -36,6 +36,7 @@
  **  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#import <Foundation/Foundation.h>
 #import "VT100Terminal.h"
 #import "VT100Types.h"
 
@@ -112,8 +113,8 @@
     BOOL printPending;
 }
 
-@property (nonatomic, retain) IBOutlet id <ScreenBufferRefreshDelegate> refreshDelegate;
-@property (nonatomic, retain) IBOutlet VT100Terminal* terminal;
+@property (nonatomic, retain) id <ScreenBufferRefreshDelegate> refreshDelegate;
+@property (nonatomic, retain) VT100Terminal* terminal;
 
 - (id)initWithWidth:(int)width height:(int)height;
 - (void)dealloc;
