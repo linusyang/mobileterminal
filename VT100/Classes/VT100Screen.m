@@ -29,7 +29,7 @@
  */
 
 // Debug option
-#define DEBUG_METHOD_TRACE 0
+#define DEBUG_METHOD_TRACE 1
 
 #import "VT100Screen.h"
 
@@ -199,9 +199,7 @@ static __inline__ screen_char_t *incrementLinePointer(
 
 
 - (void)dealloc
-{
-  [self acquireLock];
-  
+{  
   // free our character buffer
   if (buffer_lines) {
     free(buffer_lines);
@@ -422,9 +420,10 @@ static __inline__ screen_char_t *incrementLinePointer(
     }
 
     // force a redraw
-    if(dirty)
+    if(dirty) {
         free(dirty);
-    dirty=(char *)malloc(height *width *sizeof(char));
+    }
+    dirty = (char *)malloc(height * width * sizeof(char));
     // An immediate refresh is needed so that the size of TEXTVIEW can be
     // adjusted to fit the new size
     [self setDirty];
@@ -514,7 +513,6 @@ static __inline__ screen_char_t *incrementLinePointer(
     // screen is redrawn.
     int oldCursorX = CURSOR_X;
     int oldCursorY = CURSOR_Y;
-
     switch (token.type) {
         // our special code
         case VT100_STRING:
@@ -717,7 +715,7 @@ static __inline__ screen_char_t *incrementLinePointer(
                         break;
     }
     if (oldCursorX != CURSOR_X || oldCursorY != CURSOR_Y) {
-        dirty[oldCursorY *WIDTH+oldCursorX] = 1;
+        dirty[oldCursorY * WIDTH + oldCursorX] = 1;
     }
     [self releaseLock];
 }
@@ -757,7 +755,7 @@ static __inline__ screen_char_t *incrementLinePointer(
 
     [self releaseLock];
     [self setDirty];
-    [refreshDelegate updateIfNecessary];
+    [refreshDelegate refresh];
 }
 
 - (void)saveBuffer
@@ -1675,13 +1673,13 @@ static __inline__ screen_char_t *incrementLinePointer(
 
 - (void)resetDirty
 {
-    memset(dirty,0,WIDTH *HEIGHT *sizeof(char));
+    memset(dirty, 0, WIDTH * HEIGHT * sizeof(char));
 }
 
 - (void)setDirty
 {
-    memset(dirty, 1, WIDTH *HEIGHT *sizeof(char));
-    [refreshDelegate updateIfNecessary];
+    memset(dirty, 1, WIDTH * HEIGHT * sizeof(char));
+    [refreshDelegate refresh];
 }
 
 - (int)newWidth

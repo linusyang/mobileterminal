@@ -32,7 +32,12 @@ static const int kDefaultHeight = 25;
   [super dealloc];
 }
 
-- (void)handleInputStream:(const char*)data withLength:(unsigned int)length
+- (void)setRefreshDelegate:(id <ScreenBufferRefreshDelegate>)refreshDelegate;
+{
+  screen.refreshDelegate = refreshDelegate;
+}
+
+- (void)readInputStream:(const char*)data withLength:(unsigned int)length
 {
   // Push the input stream into the terminal, then parse the stream back out as
   // a series of tokens and feed them back to the screen
@@ -52,20 +57,34 @@ static const int kDefaultHeight = 25;
       NSLog(@"%s(%d):skip token", __FILE__ , __LINE__);
     }
   }
+  // Cause the text display to determine if it should re-draw anything
+  [screen.refreshDelegate refresh];
+  NSLog(@"refresh done");
 }
 
-- (void)setScreenSize:(ScreenSize)size {
+- (void)setScreenSize:(ScreenSize)size
+{
   [screen resizeWidth:size.width height:size.height];
 }
 
-- (ScreenSize)screenSize {
+- (ScreenSize)screenSize
+{
   ScreenSize size;
   size.width = [screen width];
   size.height = [screen height];
   return size;
 }
 
-- (screen_char_t*)bufferForRow:(int)row {
+- (ScreenPosition)cursorPosition
+{
+  ScreenPosition position;
+  position.x = [screen cursorX];
+  position.y = [screen cursorY];
+  return position;
+}
+
+- (screen_char_t*)bufferForRow:(int)row
+{
   return [screen getLineAtIndex:row];
 }
 

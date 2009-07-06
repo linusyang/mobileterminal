@@ -4,7 +4,8 @@
 // This file contains the bridge between the higher level text drawing
 // controls and the lower level terminal state pieces (screen and terminal).
 // The VT100 interface should be the only access from those components to the
-// VT100 subsystem.
+// VT100 subsystem.  This layer mostly exists to keep the complexity/mess of
+// the VT100Terminal and VT100 screen away from everything else.
 
 #import <Foundation/Foundation.h>
 #import "VT100Types.h"
@@ -21,14 +22,17 @@
 @private
   VT100Screen* screen;
   VT100Terminal* terminal;
+  id <ScreenBufferRefreshDelegate>* delegate;
 }
 
 // Initialize a VT100
 - (id)init;
 
+- (void)setRefreshDelegate:(id <ScreenBufferRefreshDelegate>)refreshDelegate;
+
 // Reads raw character data into the terminal character processor.  This will
 // almost certainly cause updates to the screen buffer.
-- (void)handleInputStream:(const char*)data withLength:(unsigned int)length;
+- (void)readInputStream:(const char*)data withLength:(unsigned int)length;
 
 // ScreenBuffer methods for obtaining information about the characters
 // currently on the screen.

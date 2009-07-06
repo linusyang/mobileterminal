@@ -7,16 +7,22 @@
 #import <UIKit/UIKit.h>
 
 @class VT100;
+@protocol ScreenBuffer;
+@protocol RefreshDelegate;
 
 @interface VT100TextView : UIView {
 @private
-  VT100* buffer;
+  id <ScreenBuffer> buffer;
   UIFont* font;
+  CGSize fontSize;
+  CGFontRef cgFont;
 }
 
-@property (nonatomic, retain) IBOutlet VT100* buffer;
-@property (nonatomic, retain) IBOutlet UIFont *font;
+@property (nonatomic, retain) IBOutlet id <ScreenBuffer> buffer;
 
-- (void)handleInputStream:(const char*)data withLength:(unsigned int)length;
+- (void)setFont:(UIFont*)font;
+
+// Process an input stream of data
+- (void)readInputStream:(const char*)data withLength:(unsigned int)length;
 
 @end

@@ -5,6 +5,7 @@
 // components and the higher level text view components so they both do not
 // have to depend on each other.
 
+// TODO(aporter): Include the dirty bit in this struct
 typedef struct screen_char_t {
     unichar ch;  // the actual character
     unsigned int bg_color;  // background color
@@ -16,18 +17,33 @@ typedef struct {
   int height;
 } ScreenSize;
 
-// The protocol for 
-@protocol ScreenBuffer
+typedef struct {
+  int x;
+  int y;
+} ScreenPosition;
+
+// The protocol for reading and writing data to the terminal screen
+@protocol ScreenBuffer <NSObject>
 @required
-- (void)setScreenSize:(ScreenSize)size;
+
+// Return the current size of the screen
 - (ScreenSize)screenSize;
+
+// Resize the screen to the specified size.  This is a no-op of the new size
+// is the same as the existing size.
+- (void)setScreenSize:(ScreenSize)size;
+
+// Return the position of the cursor on the screen
+- (ScreenPosition)cursorPosition;
+
 - (screen_char_t*)bufferForRow:(int)row;
+- (void)readInputStream:(const char*)data withLength:(unsigned int)length;
 @end
 
 // A thin protocol for implementing a delegate interface with a single method
 // that is invoked when the screen needs to be refreshed because at least some
 // portion has become invalidated.
-@protocol ScreenBufferRefreshDelegate
+@protocol ScreenBufferRefreshDelegate <NSObject>
 @required
-- (void)updateIfNecessary;
+- (void)refresh;
 @end

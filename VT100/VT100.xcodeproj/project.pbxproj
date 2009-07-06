@@ -330,6 +330,10 @@
 					"-framework",
 					UIKit,
 					"-lcurses",
+					"-framework",
+					CoreGraphics,
+					"-framework",
+					UIKit,
 				);
 				PREBINDING = NO;
 				PRODUCT_NAME = VT100Tests;
@@ -355,6 +359,10 @@
 					"-framework",
 					UIKit,
 					"-lcurses",
+					"-framework",
+					CoreGraphics,
+					"-framework",
+					UIKit,
 				);
 				PREBINDING = NO;
 				PRODUCT_NAME = VT100Tests;
@@ -375,6 +383,10 @@
 				OTHER_LDFLAGS = "-lcurses";
 				PREBINDING = NO;
 				SDKROOT = iphoneos3.0;
+				WARNING_CFLAGS = (
+					"-Werror",
+					"-Wall",
+				);
 			};
 			name = Debug;
 		};
@@ -389,6 +401,10 @@
 				OTHER_LDFLAGS = "-lcurses";
 				PREBINDING = NO;
 				SDKROOT = iphoneos3.0;
+				WARNING_CFLAGS = (
+					"-Werror",
+					"-Wall",
+				);
 			};
 			name = Release;
 		};

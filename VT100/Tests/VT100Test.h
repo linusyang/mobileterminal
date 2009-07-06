@@ -21,5 +21,6 @@
 - (void) testBasicInput;
 - (void) testResize;
 - (void) testMultipleLinesWithResizing;
+- (void) testCursorPosition;
 
 @end

@@ -11,7 +11,7 @@
 //
 // The VT100Terminal is wrapped by the VT100 class which provides a simpler
 // interface to use by the higher level text drawing components.
-/*
+/*`
  **  VT100Terminal.h
  **
  **  Copyright (c) 2002, 2003, 2007

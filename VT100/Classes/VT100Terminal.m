@@ -1167,7 +1167,6 @@ initWithData:data
 - (void)dealloc
 {
     free(STREAM);
-    [streamLock unlock];
     [streamLock release];
     [termType release];
 
@@ -1203,7 +1202,7 @@ initWithData:data
       setupterm((char *)[termType UTF8String], fileno(stdout), &r);
     }
 
-    if (r!=1) {
+    if (r != 1) {
         NSLog(@"Terminal type %s is not defined (%d)", [termType UTF8String], r);
         for(i = 0; i < TERMINFO_KEYS; i ++) {
             if (key_strings[i]) free(key_strings[i]);
@@ -1777,7 +1776,9 @@ initWithData:data
                 case 7: WRAPAROUND_MODE = mode; break;
                 case 8: AUTOREPEAT_MODE = mode; break;
                 case 9: INTERLACE_MODE = mode; break;
-                case 25: [SCREEN showCursor: mode]; break;
+                // TODO(aporter): Implement this command -- it needs to be
+                // exposed via the ScreenBuffer interface
+//                case 25: [SCREEN showCursor: mode]; break;
                 case 40: allowColumnMode = mode; break;
                 case 47:
                          if(mode) {
