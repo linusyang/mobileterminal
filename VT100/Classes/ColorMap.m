@@ -26,50 +26,68 @@ static const int kNumTerminalColors = 16;
   if (self != nil) {
     // System 7.5 colors, why not?
     // black
-    table[0] = [UIColor colorWithRed:0.0f green:0.0f blue:0.0f alpha:1.0f];
+    table[0] = [[UIColor colorWithRed:0.0f green:0.0f blue:0.0f alpha:1.0f] retain];
     // dark red
-    table[1] = [UIColor colorWithRed:0.6f green:0.0f blue:0.0f alpha:1.0f];
+    table[1] = [[UIColor colorWithRed:0.6f green:0.0f blue:0.0f alpha:1.0f] retain];
     // dark green
-    table[2] = [UIColor colorWithRed:0.0f green:0.6f blue:0.0f alpha:1.0f];
+    table[2] = [[UIColor colorWithRed:0.0f green:0.6f blue:0.0f alpha:1.0f] retain];
     // dark yellow
-    table[3] = [UIColor colorWithRed:0.6f green:0.4f blue:0.0f alpha:1.0f];
+    table[3] = [[UIColor colorWithRed:0.6f green:0.4f blue:0.0f alpha:1.0f] retain];
     // dark blue
-    table[4] = [UIColor colorWithRed:0.0f green:0.0f blue:0.6f alpha:1.0f];
+    table[4] = [[UIColor colorWithRed:0.0f green:0.0f blue:0.6f alpha:1.0f] retain];
     // dark magenta
-    table[5] = [UIColor colorWithRed:0.6f green:0.0f blue:0.6f alpha:1.0f];
+    table[5] = [[UIColor colorWithRed:0.6f green:0.0f blue:0.6f alpha:1.0f] retain];
     // dark cyan
-    table[6] = [UIColor colorWithRed:0.0f green:0.6f blue:0.6f alpha:1.0f];
+    table[6] = [[UIColor colorWithRed:0.0f green:0.6f blue:0.6f alpha:1.0f] retain];
     // dark white
-    table[7] = [UIColor colorWithRed:0.6f green:0.6f blue:0.6f alpha:1.0f];
+    table[7] = [[UIColor colorWithRed:0.6f green:0.6f blue:0.6f alpha:1.0f] retain];
     // black
-    table[8] = [UIColor colorWithRed:0.0f green:0.0f blue:0.0f alpha:1.0f];
+    table[8] = [[UIColor colorWithRed:0.0f green:0.0f blue:0.0f alpha:1.0f] retain];
     // red
-    table[9] = [UIColor colorWithRed:1.0f green:0.0f blue:0.0f alpha:1.0f];
+    table[9] = [[UIColor colorWithRed:1.0f green:0.0f blue:0.0f alpha:1.0f] retain];
     // green
-    table[10] = [UIColor colorWithRed:1.0f green:0.0f blue:0.0f alpha:1.0f];
+    table[10] = [[UIColor colorWithRed:1.0f green:0.0f blue:0.0f alpha:1.0f] retain];
     // yellow
-    table[11] = [UIColor colorWithRed:1.0f green:1.0f blue:0.0f alpha:1.0f];
+    table[11] = [[UIColor colorWithRed:1.0f green:1.0f blue:0.0f alpha:1.0f] retain];
     // blue
-    table[12] = [UIColor colorWithRed:0.0f green:0.0f blue:1.0f alpha:1.0f];
+    table[12] = [[UIColor colorWithRed:0.0f green:0.0f blue:1.0f alpha:1.0f] retain];
     // magenta
-    table[13] = [UIColor colorWithRed:1.0f green:0.0f blue:1.0f alpha:1.0f];
+    table[13] = [[UIColor colorWithRed:1.0f green:0.0f blue:1.0f alpha:1.0f] retain];
     // light cyan
-    table[14] = [UIColor colorWithRed:0.0f green:1.0f blue:1.0f alpha:1.0f];
+    table[14] = [[UIColor colorWithRed:0.0f green:1.0f blue:1.0f alpha:1.0f] retain];
     // white
-    table[15] = [UIColor colorWithRed:1.0f green:1.0f blue:1.0f alpha:1.0f];
+    table[15] = [[UIColor colorWithRed:1.0f green:1.0f blue:1.0f alpha:1.0f] retain];
 
-    self.background = [UIColor colorWithRed:0.0f green:0.0f blue:0.0f alpha:1.0f];
-    foreground = [UIColor colorWithRed:1.0f green:1.0f blue:1.0f alpha:1.0f];
-    foregroundBold = [UIColor colorWithRed:1.0f green:1.0f blue:0.0f alpha:1.0f];
+    background = [[UIColor colorWithRed:0.0f green:0.0f blue:0.0f alpha:1.0f] retain];
+    foreground = [[UIColor colorWithRed:1.0f green:1.0f blue:1.0f alpha:1.0f] retain];
+    NSLog(@"self=%@, fg = %@", self, foreground);
+    foregroundBold = [[UIColor colorWithRed:1.0f green:1.0f blue:0.0f alpha:1.0f] retain];
 
-    foregroundCursor = [UIColor colorWithRed:1.0f green:0.0f blue:0.0f alpha:1.0f];
-    backgroundCursor = [UIColor colorWithRed:1.0f green:1.0f blue:0.0f alpha:1.0f];
+    foregroundCursor = [[UIColor colorWithRed:1.0f green:0.0f blue:0.0f alpha:1.0f] retain];
+    backgroundCursor = [[UIColor colorWithRed:1.0f green:1.0f blue:0.0f alpha:1.0f] retain];
   }
   return self;
 }
 
+- (void) dealloc
+{
+  for (int i = 0; i < COLOR_MAP_MAX_COLORS; ++i) {
+    [table[i] dealloc];
+  }
+  [background dealloc];
+  [foreground dealloc];
+  [foregroundBold dealloc];
+  [foregroundCursor dealloc];
+  [backgroundCursor dealloc];
+  [super dealloc];
+}
+
+
+
 - (UIColor*) color:(unsigned int)index;
 {
+  // TODO(allen): The logic here is pretty ad hoc and could use some
+  // some helpful comments describing whats its doing.  It seems to work?  
   if (index & COLOR_CODE_MASK)
   {
     switch (index) {
@@ -77,7 +95,6 @@ static const int kNumTerminalColors = 16;
         return foregroundCursor;
       case CURSOR_BG:
         return backgroundCursor;
-        break;
       case BG_COLOR_CODE:
         return background;
       default:
