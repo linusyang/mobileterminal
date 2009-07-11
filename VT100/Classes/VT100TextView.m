@@ -13,6 +13,7 @@ extern void CGFontGetGlyphsForUnichars(CGFontRef, unichar[], CGGlyph[], size_t);
 @implementation VT100TextView
 
 @synthesize buffer;
+@synthesize resizeDelegate;
 
 - (id)initWithCoder:(NSCoder *)decoder
 {
@@ -55,6 +56,9 @@ extern void CGFontGetGlyphsForUnichars(CGFontRef, unichar[], CGGlyph[], size_t);
   size.width = (int)(frameSize.width / fontSize.width);
   size.height = (int)(frameSize.height / fontSize.height);
   [buffer setScreenSize:size];
+  
+  // Notify the delegate that the size of the screen has changed
+  [resizeDelegate screenResizedToWidth:size.width height:size.height];
 }
 
 // TODO(allen): This is by no means complete! The old PTYTextView does a lot
@@ -80,7 +84,7 @@ extern void CGFontGetGlyphsForUnichars(CGFontRef, unichar[], CGGlyph[], size_t);
   
   // Walk through the screen and output all characeters to the display
   ScreenSize screenSize = [buffer screenSize];  
-  unichar* characters = (unichar*)malloc(sizeof(char) * screenSize.width);
+  unichar* characters = (unichar*)malloc(sizeof(unichar) * screenSize.width);
   CGGlyph* glyphs = (CGGlyph*)malloc(sizeof(CGGlyph) * screenSize.width);
   for (int i = 0; i < screenSize.height; ++i) {
     screen_char_t* row = [buffer bufferForRow:i];
@@ -89,15 +93,22 @@ extern void CGFontGetGlyphsForUnichars(CGFontRef, unichar[], CGGlyph[], size_t);
     for (j = 0; j < screenSize.width && row[j].ch != '\0'; ++j) {
       characters[j] = row[j].ch;
     }
+    if (j == 0) {
+      continue;
+    }
     CGFontGetGlyphsForUnichars(cgFont, characters, glyphs, j);
-    CGContextShowGlyphsAtPoint(context, 0, font.pointSize * (i + 1), glyphs, j);
+    CGFloat y = font.pointSize * (i + 1);
+    CGContextShowGlyphsAtPoint(context, 0, y, glyphs, j);
   }
 }
 
-- (void)readInputStream:(const char*)data withLength:(unsigned int)length
+- (void)readInputStream:(NSData*)data;
 {
-  // Simply forward the input stream down the VT100 processor.
-  [buffer readInputStream:data withLength:length]; 
+  // Simply forward the input stream down the VT100 processor.  When it notices
+  // changes to the screen, it should invoke our refresh delegate below.
+  // TODO(aporter): The ScreenBuffer interface should just deal with NSData
+  // directly.
+  [buffer readInputStream:(const char*)[data bytes] withLength:[data length]];
 }
 
 @end
@@ -106,7 +117,7 @@ extern void CGFontGetGlyphsForUnichars(CGFontRef, unichar[], CGGlyph[], size_t);
 
 - (void)refresh
 {
-  // TODO(aporter): Call setNeedsDisplayInRect for all just the dirty bits
+  // TODO(aporter): Call setNeedsDisplayInRect for only the dirty bits
   [self setNeedsDisplay];
 }
 

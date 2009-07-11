@@ -1,9 +1,4 @@
-// VT100Screen.m
-// MobileTeterminal
-//
-// This header file originally came from the iTerm project, but has been
-// modified heavily for use in MobileTerminal.  See the original copyright
-// below.
+// -*- mode:objc -*-
 /*
  **  VT100Screen.m
  **
@@ -11,7 +6,7 @@
  **
  **  Author: Fabian, Ujwal S. Setlur
  **          Initial code by Kiichi Kusama
- **          Ported to Mobileterminal (from iTerm) by Allen Porter
+ **          Ported to MobileTerminal (from iTerm) by Allen Porter
  **
  **  This program is free software; you can redistribute it and/or modify
  **  it under the terms of the GNU General Public License as published by
@@ -29,17 +24,18 @@
  */
 
 // Debug option
-#define DEBUG_METHOD_TRACE 1
+#define DEBUG_ALLOC 0
+#define DEBUG_METHOD_TRACE 0
 
 #import "VT100Screen.h"
 
+#import "charmaps.h"
 #include <string.h>
 #include <unistd.h>
-#import "charmaps.h"
 
 #define MAX_SCROLLBACK_LINES 100000
 #define DEFAULT_TERMINAL_WIDTH 80
-#define DEFAULT_TERMINAL_HEIGHT 25
+#define DEFAULT_TERMINAL_HEIGHT 24
 
 // we add a character at the end of line to indiacte wrapping
 #define REAL_WIDTH (WIDTH+1)
@@ -100,17 +96,14 @@ static __inline__ screen_char_t *incrementLinePointer(
 
 @interface VT100Screen (Private)
 
-- (screen_char_t *)getLineAtIndex:(int)anIndex
-                         fromLine:(screen_char_t *)aLine;
-- (screen_char_t *)getDefaultLineWithWidth:(int)width;
-- (BOOL)addLineToScrollback;
+- (screen_char_t *)_getLineAtIndex:(int)anIndex
+                          fromLine:(screen_char_t *)aLine;
+- (screen_char_t *)_getDefaultLineWithWidth:(int)width;
+- (BOOL)_addLineToScrollback;
 
 @end
 
 @implementation VT100Screen
-
-@synthesize terminal;
-@synthesize refreshDelegate;
 
 #define DEFAULT_SCROLLBACK 1000
 
@@ -119,12 +112,91 @@ static __inline__ screen_char_t *incrementLinePointer(
 
 #define TABSIZE 8
 
-- (id)initWithWidth:(int)width height:(int)height
+@synthesize refreshDelegate;
+
+- (id)init
 {
-  self = [super init];
-  if (self != nil) {  
-    int total_height;
+#if DEBUG_ALLOC
+    NSLog(@"%s: 0x%x", __PRETTY_FUNCTION__, self);
+#endif
+    if ((self = [super init]) == nil)
+        return nil;
+
+    WIDTH = DEFAULT_TERMINAL_WIDTH;
+    HEIGHT = DEFAULT_TERMINAL_HEIGHT;
+
+    CURSOR_X = CURSOR_Y = 0;
+    SAVE_CURSOR_X = SAVE_CURSOR_Y = 0;
+    SCROLL_TOP = 0;
+    SCROLL_BOTTOM = HEIGHT - 1;
+
+    TERMINAL = nil;
+
+    buffer_lines = NULL;
+    dirty = NULL;
+    last_buffer_line = NULL;
+    screen_top = NULL;
+    scrollback_top = NULL;
+
+    temp_buffer=NULL;
+
+    max_scrollback_lines = DEFAULT_SCROLLBACK;
+    dynamic_scrollback_size = NO;
+    [self clearTabStop];
+
+    // set initial tabs
     int i;
+    for(i = TABSIZE; i < TABWINDOW; i += TABSIZE) {
+        tabStop[i] = YES;
+    }
+
+    for(i = 0; i < 4; i++) saveCharset[i] = charset[i] = 0;
+
+    screenLock = [[NSLock alloc] init];
+
+    newWinTitle = nil;
+    newIconTitle = nil;
+    soundBell =  NO;
+    scrollUpLines = 0;
+    [self initScreenWithWidth:DEFAULT_TERMINAL_WIDTH Height:DEFAULT_TERMINAL_HEIGHT];
+    return self;
+}
+
+- (void)dealloc
+{
+#if DEBUG_ALLOC
+    NSLog(@"%s: 0x%x", __PRETTY_FUNCTION__, self);
+#endif
+
+    // free our character buffer
+    if (buffer_lines) {
+        free(buffer_lines);
+    }
+
+    // free our "dirty flags" buffer
+    if (dirty) {
+        free(dirty);
+    }
+    // free our default line
+    if (default_line) {
+        free(default_line);
+    }
+
+    if (temp_buffer) {
+        free(temp_buffer);
+    }
+
+    [printToAnsiString release];
+
+    [super dealloc];
+#if DEBUG_ALLOC
+    NSLog(@"%s: 0x%x, done", __PRETTY_FUNCTION__, self);
+#endif
+}
+
+- (void)initScreenWithWidth:(int)width Height:(int)height
+{
+    int total_height;
     screen_char_t *aDefaultLine;
 
 #if DEBUG_METHOD_TRACE
@@ -137,35 +209,8 @@ static __inline__ screen_char_t *incrementLinePointer(
     SAVE_CURSOR_X = SAVE_CURSOR_Y = 0;
     SCROLL_TOP = 0;
     SCROLL_BOTTOM = HEIGHT - 1;
-    blinkShow = YES;
-    
-    terminal = nil;
-    
-    dirty = NULL;
-    last_buffer_line = NULL;
-    screen_top = NULL;
-    scrollback_top = NULL;
-    
-    temp_buffer=NULL;
-    
-    max_scrollback_lines = DEFAULT_SCROLLBACK;
-    dynamic_scrollback_size = NO;
-    [self clearTabStop];
-    
-    // set initial tabs
-    for(int i = TABSIZE; i < TABWINDOW; i += TABSIZE) {
-      tabStop[i] = YES;
-    }
-    
-    for(i = 0; i < 4; i++) { saveCharset[i] = charset[i] = 0; }
-    
-    screenLock = [[NSLock alloc] init];
-    
-    newWinTitle = nil;
-    newIconTitle = nil;
-    bellSounding =  NO;
-    scrollUpLines = 0;
-  
+    blinkShow=YES;
+
     // allocate our buffer to hold both scrollback and screen contents
     total_height = HEIGHT + max_scrollback_lines;
     buffer_lines = (screen_char_t *)malloc(
@@ -177,12 +222,12 @@ static __inline__ screen_char_t *incrementLinePointer(
     scrollback_top = buffer_lines;
 
     // set all lines in buffer to default
-    default_fg_code = [terminal foregroundColorCode];
-    default_bg_code = [terminal backgroundColorCode];
+    default_fg_code = [TERMINAL foregroundColorCode];
+    default_bg_code = [TERMINAL backgroundColorCode];
     default_line_width = WIDTH;
-    aDefaultLine = [self getDefaultLineWithWidth: WIDTH];
-    for(i = 0; i < HEIGHT; i++)
-        memcpy([self getLineAtIndex:i fromLine:buffer_lines], aDefaultLine,
+    aDefaultLine = [self _getDefaultLineWithWidth: WIDTH];
+    for(int i = 0; i < HEIGHT; i++)
+        memcpy([self _getLineAtIndex:i fromLine:buffer_lines], aDefaultLine,
                 REAL_WIDTH *sizeof(screen_char_t));
 
     // set current lines in scrollback
@@ -193,36 +238,6 @@ static __inline__ screen_char_t *incrementLinePointer(
 
     // force a redraw
     [self setDirty];
-  }
-  return self;
-}
-
-
-- (void)dealloc
-{  
-  // free our character buffer
-  if (buffer_lines) {
-    free(buffer_lines);
-  }
-  
-  // free our "dirty flags" buffer
-  if (dirty) {
-    free(dirty);
-  }
-  // free our default line
-  if (default_line) {
-    free(default_line);
-  }
-  
-  if (temp_buffer) {
-    free(temp_buffer);
-  }
-  
-  [screenLock release];
-  
-  [printToAnsiString release];
-  
-  [super dealloc];
 }
 
 
@@ -246,20 +261,38 @@ static __inline__ screen_char_t *incrementLinePointer(
 // gets line at specified index starting from scrollback_top
 - (screen_char_t *)getLineAtIndex:(int)theIndex
 {
+    NSParameterAssert(theIndex >= 0);
     screen_char_t *theLinePointer;
 
-    if(max_scrollback_lines == 0)
+    if (max_scrollback_lines == 0)
         theLinePointer = screen_top;
     else
         theLinePointer = scrollback_top;
 
-    return ([self getLineAtIndex:theIndex fromLine:theLinePointer]);
+    return ([self _getLineAtIndex:theIndex fromLine:theLinePointer]);
 }
 
 // gets line at specified index starting from screen_top
 - (screen_char_t *)getLineAtScreenIndex:(int)theIndex
 {
-    return ([self getLineAtIndex:theIndex fromLine:screen_top]);
+    return ([self _getLineAtIndex:theIndex fromLine:screen_top]);
+}
+
+- (void)setWidth:(int)width height:(int)height
+{
+#if DEBUG_METHOD_TRACE
+    NSLog(@"%s(%d):-[VT100Screen setWidth:%d height:%d]",
+            __FILE__, __LINE__, width, height);
+#endif
+
+    if (width >= MIN_WIDTH && height >= MIN_HEIGHT) {
+        WIDTH = width;
+        HEIGHT = height;
+        CURSOR_X = CURSOR_Y = 0;
+        SAVE_CURSOR_X = SAVE_CURSOR_Y = 0;
+        SCROLL_TOP = 0;
+        SCROLL_BOTTOM = HEIGHT - 1;
+    }
 }
 
 - (void)resizeWidth:(int)width height:(int)height
@@ -267,7 +300,7 @@ static __inline__ screen_char_t *incrementLinePointer(
     int i, total_height, new_total_height;
     screen_char_t *bl, *aLine, *c1, *c2, *new_scrollback_top;
 
-    if (WIDTH == 0 || HEIGHT == 0 || (width == WIDTH && height == HEIGHT)) {
+    if (WIDTH == 0 || HEIGHT == 0 || (width==WIDTH && height==HEIGHT)) {
         return;
     }
 
@@ -290,7 +323,7 @@ static __inline__ screen_char_t *incrementLinePointer(
     //copy over the content
     int y1, y2, x1, x2, x3;
     BOOL wrapped = NO, _wrap;
-    screen_char_t *defaultLine = [self getDefaultLineWithWidth: width];
+    screen_char_t *defaultLine = [self _getDefaultLineWithWidth: width];
 
     c2 = bl;
     for(y2=y1=0; y1<current_scrollback_lines+HEIGHT; y1++) {
@@ -420,15 +453,17 @@ static __inline__ screen_char_t *incrementLinePointer(
     }
 
     // force a redraw
-    if(dirty) {
+    if(dirty)
         free(dirty);
-    }
-    dirty = (char *)malloc(height * width * sizeof(char));
-    // An immediate refresh is needed so that the size of TEXTVIEW can be
-    // adjusted to fit the new size
+    dirty=(char *)malloc(height *width *sizeof(char));
     [self setDirty];
     // release lock
     [self releaseLock];
+
+    // An immediate refresh is needed so that the size of TEXTVIEW can be
+    // adjusted to fit the new size
+  NSLog(@"width=%d, height=%d", WIDTH, HEIGHT);
+    [refreshDelegate refresh];
 }
 
 - (void)reset
@@ -453,17 +488,17 @@ static __inline__ screen_char_t *incrementLinePointer(
     [self showCursor: YES];
     newWinTitle = nil;
     newIconTitle = nil;
-    bellSounding = NO;
+    soundBell = NO;
 }
 
-- (int) width
+- (int)width
 {
-  return WIDTH;
+    return WIDTH;
 }
 
-- (int) height
+- (int)height
 {
-  return HEIGHT;
+    return HEIGHT;
 }
 
 - (unsigned int)scrollbackLines
@@ -472,19 +507,33 @@ static __inline__ screen_char_t *incrementLinePointer(
 }
 
 // sets scrollback lines.
-- (void)setScrollback:(unsigned int)numLines;
+- (void)setScrollback:(unsigned int)lineCount;
 {
     // if we already have a buffer, don't allow this
-    if (buffer_lines != NULL)
+    if(buffer_lines != NULL)
         return;
 
-    if (numLines < 0 || numLines > MAX_SCROLLBACK_LINES) {
+    if (lineCount < 0 || lineCount > MAX_SCROLLBACK_LINES) {
         dynamic_scrollback_size = YES;
         max_scrollback_lines = DEFAULT_SCROLLBACK;
     } else {
         dynamic_scrollback_size = NO;
-        max_scrollback_lines = numLines;
+        max_scrollback_lines = lineCount;
     }
+}
+
+- (void)setTerminal:(VT100Terminal *)terminal
+{
+#if DEBUG_METHOD_TRACE
+    NSLog(@"%s(%d):-[VT100Screen setTerminal:%@]",
+            __FILE__, __LINE__, terminal);
+#endif
+    TERMINAL = terminal;
+}
+
+- (VT100Terminal *)terminal
+{
+    return TERMINAL;
 }
 
 - (BOOL)blinkingCursor
@@ -513,6 +562,7 @@ static __inline__ screen_char_t *incrementLinePointer(
     // screen is redrawn.
     int oldCursorX = CURSOR_X;
     int oldCursorY = CURSOR_Y;
+
     switch (token.type) {
         // our special code
         case VT100_STRING:
@@ -529,7 +579,7 @@ static __inline__ screen_char_t *incrementLinePointer(
 
                           // VT100 CC
    case VT100CC_ENQ: break;
-   case VT100CC_BEL: bellSounding = YES; break;
+   case VT100CC_BEL: soundBell = YES; break;
    case VT100CC_BS: [self backSpace]; break;
    case VT100CC_HT: [self setTab]; break;
    case VT100CC_LF:
@@ -570,8 +620,8 @@ static __inline__ screen_char_t *incrementLinePointer(
                           aLine = [self getLineAtScreenIndex: i];
                           for(j = 0; j < WIDTH; j++) {
                               aLine[j].ch ='E';
-                              aLine[j].fg_color = [terminal foregroundColorCode];
-                              aLine[j].bg_color = [terminal backgroundColorCode];
+                              aLine[j].fg_color = [TERMINAL foregroundColorCode];
+                              aLine[j].bg_color = [TERMINAL backgroundColorCode];
                           }
                           aLine[WIDTH].ch = 0;
                       }
@@ -639,9 +689,9 @@ static __inline__ screen_char_t *incrementLinePointer(
 
    case VT100CSI_DECSET:
    case VT100CSI_DECRST:
-                     if (token.u.csi.p[0]==3 && [terminal allowColumnMode] == YES) {
+                     if (token.u.csi.p[0]==3 && [TERMINAL allowColumnMode] == YES) {
                          // set the column
-                         newWidth = [terminal columnMode]?132:80;
+                         newWidth = [TERMINAL columnMode]?132:80;
                          newHeight = HEIGHT;
                      }
                      break;
@@ -664,15 +714,15 @@ static __inline__ screen_char_t *incrementLinePointer(
         aLine = [self getLineAtScreenIndex: CURSOR_Y];
         for(k = 0; k < j; k++) {
             aLine[CURSOR_X+k].ch = 0;
-            aLine[CURSOR_X+k].fg_color = [terminal foregroundColorCode];
-            aLine[CURSOR_X+k].bg_color = [terminal backgroundColorCode];
+            aLine[CURSOR_X+k].fg_color = [TERMINAL foregroundColorCode];
+            aLine[CURSOR_X+k].bg_color = [TERMINAL backgroundColorCode];
         }
         memset(dirty+i,1,j);
     }
     break;
 
    case STRICT_ANSI_MODE:
-                      [terminal setStrictAnsiMode: ![terminal strictAnsiMode]];
+                      [TERMINAL setStrictAnsiMode: ![TERMINAL strictAnsiMode]];
                       break;
 
    case ANSICSI_PRINT:
@@ -715,7 +765,7 @@ static __inline__ screen_char_t *incrementLinePointer(
                         break;
     }
     if (oldCursorX != CURSOR_X || oldCursorY != CURSOR_Y) {
-        dirty[oldCursorY * WIDTH + oldCursorX] = 1;
+        dirty[oldCursorY *WIDTH+oldCursorX] = 1;
     }
     [self releaseLock];
 }
@@ -742,7 +792,7 @@ static __inline__ screen_char_t *incrementLinePointer(
     [self acquireLock];
 
     if (max_scrollback_lines) {
-        aDefaultLine = [self getDefaultLineWithWidth: WIDTH];
+        aDefaultLine = [self _getDefaultLineWithWidth: WIDTH];
         for(i = 0; i < current_scrollback_lines; i++) {
             aLine = [self getLineAtIndex:i];
             memcpy(aLine, aDefaultLine, REAL_WIDTH *sizeof(screen_char_t));
@@ -832,23 +882,21 @@ static __inline__ screen_char_t *incrementLinePointer(
 
 - (void)setString:(NSString *)string ascii:(BOOL)ascii
 {
-    int idx, screenIdx;
-    int j, len, newx;
     screen_char_t *buffer;
-    screen_char_t *aLine;
 
 #if DEBUG_METHOD_TRACE
     NSLog(@"%s(%d):-[VT100Screen setString:%@ at %d]",
             __FILE__, __LINE__, string, CURSOR_X);
 #endif
 
+    int len;
     if ((len=[string length]) < 1 || !string) {
         NSLog(@"%s: invalid string '%@'", __PRETTY_FUNCTION__, string);
         return;
     }
     if (ascii) {
         unichar *sc = (unichar *) malloc(len *sizeof(unichar));
-        int fg=[terminal foregroundColorCode], bg=[terminal backgroundColorCode];
+        int fg=[TERMINAL foregroundColorCode], bg=[TERMINAL backgroundColorCode];
 
         buffer = (screen_char_t *) malloc([string length] * sizeof(screen_char_t));
         if (!buffer) {
@@ -865,10 +913,10 @@ static __inline__ screen_char_t *incrementLinePointer(
         }
 
         // check for graphical characters
-        if (charset[[terminal charset]]) {
+        if (charset[[TERMINAL charset]]) {
             translate(buffer,len);
         }
-        // NSLog(@"%d(%d):%@",[terminal charset],charset[[terminal charset]],string);
+        // NSLog(@"%d(%d):%@",[TERMINAL charset],charset[[TERMINAL charset]],string);
         free(sc);
     } else {
         string = [string precomposedStringWithCanonicalMapping];
@@ -878,93 +926,36 @@ static __inline__ screen_char_t *incrementLinePointer(
             NSLog(@"%s: Out of memory", __PRETTY_FUNCTION__);
             return;
         }
-        padString(string, buffer, [terminal foregroundColorCode],
-                [terminal backgroundColorCode], &len, [terminal encoding]);
+        padString(string, buffer, [TERMINAL foregroundColorCode],
+                [TERMINAL backgroundColorCode], &len, [TERMINAL encoding]);
     }
 
     if (len < 1)
         return;
 
-    for (idx = 0; idx < len;) {
+    // TODO(allen): Implement insert mode
+    for (int idx = 0; idx < len; idx++) {
+        NSLog(@"idx=%d CURSOR_X=%d, WIDTH=%d (%c)", idx, CURSOR_X, WIDTH, buffer[idx].ch);
         // cut off in the middle of double width characters
         if (buffer[idx].ch == 0xffff) {
             buffer[idx].ch = '#';
         }
-
+        screen_char_t *aLine = [self getLineAtScreenIndex: CURSOR_Y];
+        aLine[CURSOR_X] = buffer[idx];
+        dirty[CURSOR_Y * WIDTH + CURSOR_X] = 1;
+      
+        // Dirty the new cursor position
+        CURSOR_X++;
+        dirty[CURSOR_Y * WIDTH + CURSOR_X] = 1;
+      
+        // Wrap
         if (CURSOR_X >= WIDTH) {
-            if ([terminal wraparoundMode]) {
-                CURSOR_X=0;
-                //set the wrapping flag
-                [self getLineAtScreenIndex: CURSOR_Y][WIDTH].ch = 1;
-                [self setNewLine];
-            } else {
-                //set the wrapping flag
-                [self getLineAtScreenIndex: CURSOR_Y][WIDTH].ch = 0;
-                CURSOR_X=WIDTH-1;
-                idx=len-1;
-            }
-        }
-        if (WIDTH - CURSOR_X <= len - idx)
-            newx = WIDTH;
-        else
-            newx = CURSOR_X + len - idx;
-        j = newx - CURSOR_X;
-
-        if (j <= 0) {
-            //NSLog(@"setASCIIString: output length=0?(%d+%d)%d+%d",CURSOR_X,j,idx2,len);
-            break;
-        }
-
-        screenIdx = CURSOR_Y *WIDTH;
-        // FIXME: when overriding PTYTextView's setFrame method, CURSOR_Y = -1
-        //        gets passed to the following method, causing its contained
-        //        assertion to fail
-        aLine = [self getLineAtScreenIndex: CURSOR_Y];
-
-        if ([terminal insertMode]) {
-            if (CURSOR_X + j < WIDTH) {
-                memmove(aLine+CURSOR_X+j,aLine+CURSOR_X,(WIDTH-CURSOR_X-j)*sizeof(screen_char_t));
-                memset(dirty+screenIdx+CURSOR_X,1,WIDTH-CURSOR_X);
-            }
-        }
-
-        if (aLine[CURSOR_X].ch == 0xffff) {
-            if (CURSOR_X > 0) {
-                aLine[CURSOR_X-1].ch = '!';
-            }
-        }
-
-        // insert as many characters as we can
-        memcpy(aLine + CURSOR_X, buffer + idx, j *sizeof(screen_char_t));
-        memset(dirty + screenIdx + CURSOR_X, 1, j);
-
-        CURSOR_X = newx;
-        idx += j;
-
-        // cut off in the middle of double width characters
-        if (CURSOR_X<WIDTH-1 && aLine[CURSOR_X].ch == 0xffff) {
-            aLine[CURSOR_X].ch = '#';
-        }
-
-        if (idx<len && buffer[idx].ch == 0xffff) {
-            if (CURSOR_X>0) aLine[CURSOR_X-1].ch = '#';
-        }
-
-        // ANSI termianls will go to a new line after displaying a character at rightest column.
-        if (CURSOR_X >= WIDTH &&
-                [[terminal termtype] rangeOfString:@"ANSI" options:NSCaseInsensitiveSearch | NSAnchoredSearch ].location != NSNotFound) {
-            if ([terminal wraparoundMode]) {
-                //set the wrapping flag
-                aLine[WIDTH].ch = 1;
-                CURSOR_X=0;
-                [self setNewLine];
-            } else {
-                CURSOR_X=WIDTH-1;
-                idx=len-1;
-            }
+            CURSOR_X = 0;
+            [self getLineAtScreenIndex: CURSOR_Y][WIDTH].ch = 1;
+            [self setNewLine]; 
         }
     }
-
+  
     free(buffer);
 
 #if DEBUG_METHOD_TRACE
@@ -985,38 +976,32 @@ static __inline__ screen_char_t *incrementLinePointer(
     if (CURSOR_Y < SCROLL_BOTTOM || (CURSOR_Y < (HEIGHT - 1) && CURSOR_Y > SCROLL_BOTTOM)) {
         CURSOR_Y++;
         if (CURSOR_X < WIDTH) {
-            dirty[CURSOR_Y *WIDTH+CURSOR_X] = 1;
+            dirty[CURSOR_Y * WIDTH + CURSOR_X] = 1;
         }
     } else if (SCROLL_TOP == 0 && SCROLL_BOTTOM == HEIGHT - 1) {
         total_height = max_scrollback_lines + HEIGHT;
 
         // try to add top line to scroll area
         if (max_scrollback_lines > 0) {
-            if ([self addLineToScrollback]) {
+            if ([self _addLineToScrollback]) {
+                // TODO(allen): This could probably be a bit smarter
                 // scroll buffer overflow, entire screen needs to be redrawn
                 [self setDirty];
-                // TODO(allen): Worth implementing? Its unclear to me how this works yet
-                /*
-                   if ([(PTYScroller *)([[display enclosingScrollView] verticalScroller]) userScroll]) {
-                   scrollUpLines++;
-                   }
-                   */
             } else{
                 // top line can move into scroll area; we need to draw only bottom line
                 //dirty[WIDTH *(CURSOR_Y-1)*sizeof(char)+CURSOR_X-1]=1;
                 memmove(dirty, dirty+WIDTH *sizeof(char), WIDTH *(HEIGHT-1)*sizeof(char));
                 memset(dirty+WIDTH *(HEIGHT-1)*sizeof(char),1,WIDTH *sizeof(char));
             };
-        } else {
+        } else
             [self setDirty];
-        }
 
         // Increment screen_top pointer
         screen_top = incrementLinePointer(buffer_lines, screen_top, total_height, WIDTH, &wrap);
 
         // set last screen line default
         aLine = [self getLineAtScreenIndex: (HEIGHT - 1)];
-        memcpy(aLine, [self getDefaultLineWithWidth: WIDTH], REAL_WIDTH *sizeof(screen_char_t));
+        memcpy(aLine, [self _getDefaultLineWithWidth: WIDTH], REAL_WIDTH *sizeof(screen_char_t));
 
     } else {
         [self scrollUp];
@@ -1047,8 +1032,8 @@ static __inline__ screen_char_t *incrementLinePointer(
         }
         for(i = 0; i < n; i++) {
             aLine[WIDTH-n+i].ch = 0;
-            aLine[WIDTH-n+i].fg_color = [terminal foregroundColorCode];
-            aLine[WIDTH-n+i].bg_color = [terminal backgroundColorCode];
+            aLine[WIDTH-n+i].fg_color = [TERMINAL foregroundColorCode];
+            aLine[WIDTH-n+i].bg_color = [TERMINAL backgroundColorCode];
         }
         memset(dirty+idx+CURSOR_X,1,WIDTH-CURSOR_X);
     }
@@ -1101,7 +1086,7 @@ static __inline__ screen_char_t *incrementLinePointer(
     }
 
     CURSOR_Y = j-1;
-    aDefaultLine = [self getDefaultLineWithWidth: WIDTH];
+    aDefaultLine = [self _getDefaultLineWithWidth: WIDTH];
     for (i = j; i < HEIGHT; i++) {
         aLine = [self getLineAtScreenIndex:i];
         memcpy(aLine, aDefaultLine, REAL_WIDTH *sizeof(screen_char_t));
@@ -1161,8 +1146,8 @@ static __inline__ screen_char_t *incrementLinePointer(
         if(aScreenChar >= (buffer_lines + total_height *REAL_WIDTH))
             aScreenChar = buffer_lines; // wrap around to top of buffer
         aScreenChar->ch = 0;
-        aScreenChar->fg_color = [terminal foregroundColorCode];
-        aScreenChar->bg_color = [terminal backgroundColorCode];
+        aScreenChar->fg_color = [TERMINAL foregroundColorCode];
+        aScreenChar->bg_color = [TERMINAL backgroundColorCode];
     }
 
     memset(dirty+y1 *WIDTH+x1,1,((y2-y1)*WIDTH+(x2-x1))*sizeof(char));
@@ -1210,8 +1195,8 @@ static __inline__ screen_char_t *incrementLinePointer(
     //}
     //else
     //{
-    fgCode = [terminal foregroundColorCode];
-    bgCode = [terminal backgroundColorCode];
+    fgCode = [TERMINAL foregroundColorCode];
+    bgCode = [TERMINAL backgroundColorCode];
     //}
 
 
@@ -1330,7 +1315,7 @@ static __inline__ screen_char_t *incrementLinePointer(
     x_pos = x - 1;
     y_pos = y - 1;
 
-    if ([terminal originMode]) y_pos += SCROLL_TOP;
+    if ([TERMINAL originMode]) y_pos += SCROLL_TOP;
 
     if (x_pos < 0)
         x_pos = 0;
@@ -1407,7 +1392,7 @@ static __inline__ screen_char_t *incrementLinePointer(
         SCROLL_TOP = top;
         SCROLL_BOTTOM = bottom;
 
-        if ([terminal originMode]) {
+        if ([TERMINAL originMode]) {
             CURSOR_X = 0;
             CURSOR_Y = SCROLL_TOP;
         } else {
@@ -1450,7 +1435,7 @@ static __inline__ screen_char_t *incrementLinePointer(
         }
         // new line at SCROLL_BOTTOM with default settings
         targetLine = [self getLineAtScreenIndex:SCROLL_BOTTOM];
-        memcpy(targetLine, [self getDefaultLineWithWidth: WIDTH], REAL_WIDTH *sizeof(screen_char_t));
+        memcpy(targetLine, [self _getDefaultLineWithWidth: WIDTH], REAL_WIDTH *sizeof(screen_char_t));
 
         // everything between SCROLL_TOP and SCROLL_BOTTOM is dirty
         memset(dirty+SCROLL_TOP *WIDTH,1,(SCROLL_BOTTOM-SCROLL_TOP+1)*WIDTH *sizeof(char));
@@ -1489,7 +1474,7 @@ static __inline__ screen_char_t *incrementLinePointer(
     }
     // new line at SCROLL_TOP with default settings
     targetLine = [self getLineAtScreenIndex:SCROLL_TOP];
-    memcpy(targetLine, [self getDefaultLineWithWidth: WIDTH], REAL_WIDTH *sizeof(screen_char_t));
+    memcpy(targetLine, [self _getDefaultLineWithWidth: WIDTH], REAL_WIDTH *sizeof(screen_char_t));
 
     // everything between SCROLL_TOP and SCROLL_BOTTOM is dirty
     memset(dirty+SCROLL_TOP *WIDTH,1,(SCROLL_BOTTOM-SCROLL_TOP+1)*WIDTH *sizeof(char));
@@ -1517,8 +1502,8 @@ static __inline__ screen_char_t *incrementLinePointer(
 
     for(i = 0; i < n; i++) {
         aLine[CURSOR_X+i].ch = 0;
-        aLine[CURSOR_X+i].fg_color = [terminal foregroundColorCode];
-        aLine[CURSOR_X+i].bg_color = [terminal backgroundColorCode];
+        aLine[CURSOR_X+i].fg_color = [TERMINAL foregroundColorCode];
+        aLine[CURSOR_X+i].bg_color = [TERMINAL backgroundColorCode];
     }
 
     // everything from CURSOR_X to end of line is dirty
@@ -1552,7 +1537,7 @@ static __inline__ screen_char_t *incrementLinePointer(
         n=SCROLL_BOTTOM-CURSOR_Y+1;
 
     // clear the n lines
-    aDefaultLine = [self getDefaultLineWithWidth: WIDTH];
+    aDefaultLine = [self _getDefaultLineWithWidth: WIDTH];
     for(i = 0; i < n; i++) {
         sourceLine = [self getLineAtScreenIndex:CURSOR_Y+i];
         memcpy(sourceLine, aDefaultLine, REAL_WIDTH *sizeof(screen_char_t));
@@ -1586,7 +1571,7 @@ static __inline__ screen_char_t *incrementLinePointer(
     if (n+CURSOR_Y>SCROLL_BOTTOM)
         n=SCROLL_BOTTOM-CURSOR_Y+1;
     // clear the n lines
-    aDefaultLine = [self getDefaultLineWithWidth: WIDTH];
+    aDefaultLine = [self _getDefaultLineWithWidth: WIDTH];
     for(i = 0; i < n; i++) {
         sourceLine = [self getLineAtScreenIndex:SCROLL_BOTTOM-n+1+i];
         memcpy(sourceLine, aDefaultLine, REAL_WIDTH *sizeof(screen_char_t));
@@ -1623,10 +1608,12 @@ static __inline__ screen_char_t *incrementLinePointer(
     if (PLAYBELL) {
         // TODO(allen): Implement! :)
         NSLog(@"Bell not implemented");
+        //NSBeep();
     }
     if (SHOWBELL) {
         // TODO(allen): Implement! :)
         NSLog(@"Visual bell not implemented");
+        //[SESSION setBell: YES];
     }
 }
 
@@ -1659,11 +1646,11 @@ static __inline__ screen_char_t *incrementLinePointer(
 
 - (int)numberOfLines
 {
-    int num_lines_in_scrollback;
-
-    num_lines_in_scrollback = (current_scrollback_lines > max_scrollback_lines)?max_scrollback_lines:current_scrollback_lines;
-
-    return (num_lines_in_scrollback+HEIGHT);
+  int num_lines_in_scrollback =
+    (current_scrollback_lines > max_scrollback_lines)
+      ? max_scrollback_lines
+      : current_scrollback_lines;
+  return (num_lines_in_scrollback + HEIGHT);
 }
 
 - (char *)dirty
@@ -1673,12 +1660,13 @@ static __inline__ screen_char_t *incrementLinePointer(
 
 - (void)resetDirty
 {
-    memset(dirty, 0, WIDTH * HEIGHT * sizeof(char));
+    memset(dirty,0,WIDTH *HEIGHT *sizeof(char));
 }
 
 - (void)setDirty
 {
-    memset(dirty, 1, WIDTH * HEIGHT * sizeof(char));
+    memset(dirty, 1, WIDTH *HEIGHT *sizeof(char));
+    // FIXME: should be done as via delegate/protocol
     [refreshDelegate refresh];
 }
 
@@ -1694,14 +1682,14 @@ static __inline__ screen_char_t *incrementLinePointer(
 
 - (void)updateBell
 {
-    if (bellSounding)
+    if (soundBell)
         [self activateBell];
-    bellSounding = NO;
+    soundBell = NO;
 }
 
 - (void)setBell
 {
-    bellSounding = YES;
+    soundBell = YES;
 }
 
 - (int)scrollUpLines
@@ -1718,8 +1706,8 @@ static __inline__ screen_char_t *incrementLinePointer(
 
 @implementation VT100Screen (Private)
 
-// gets line offset by specified index from specified line poiner; accounts for buffer wrap
-- (screen_char_t *)getLineAtIndex:(int)anIndex fromLine:(screen_char_t *)aLine
+    // gets line offset by specified index from specified line poiner; accounts for buffer wrap
+- (screen_char_t *)_getLineAtIndex:(int)anIndex fromLine:(screen_char_t *)aLine
 {
     screen_char_t *the_line = NULL;
     NSParameterAssert(anIndex >= 0);
@@ -1734,13 +1722,13 @@ static __inline__ screen_char_t *incrementLinePointer(
 
 // returns a line set to default character and attributes
 // released when session is closed
-- (screen_char_t *)getDefaultLineWithWidth:(int)width
+- (screen_char_t *)_getDefaultLineWithWidth:(int)width
 {
     int i;
 
     // check if we have to generate a new line
-    if(default_line && default_fg_code == [terminal foregroundColorCode] &&
-            default_bg_code == [terminal backgroundColorCode] && default_line_width >= width) {
+    if(default_line && default_fg_code == [TERMINAL foregroundColorCode] &&
+            default_bg_code == [TERMINAL backgroundColorCode] && default_line_width >= width) {
         return (default_line);
     }
 
@@ -1751,21 +1739,21 @@ static __inline__ screen_char_t *incrementLinePointer(
 
     for(i = 0; i < width; i++) {
         default_line[i].ch = 0;
-        default_line[i].fg_color = [terminal foregroundColorCode];
-        default_line[i].bg_color = [terminal backgroundColorCode];
+        default_line[i].fg_color = [TERMINAL foregroundColorCode];
+        default_line[i].bg_color = [TERMINAL backgroundColorCode];
     }
     //Not wrapped by default
     default_line[width].ch = 0;
 
-    default_fg_code = [terminal foregroundColorCode];
-    default_bg_code = [terminal backgroundColorCode];
+    default_fg_code = [TERMINAL foregroundColorCode];
+    default_bg_code = [TERMINAL backgroundColorCode];
     default_line_width = width;
     return (default_line);
 }
 
 
 // adds a line to scrollback area. Returns YES if oldest line is lost, NO otherwise
-- (BOOL)addLineToScrollback
+- (BOOL)_addLineToScrollback
 {
     BOOL lost_oldest_line = NO;
     BOOL wrap;
@@ -1786,7 +1774,7 @@ static __inline__ screen_char_t *incrementLinePointer(
                     current_scrollback_lines = max_scrollback_lines;
                     lost_oldest_line = YES;
                 } else {
-                    /*screen_char_t *aLine = [self getDefaultLineWithWidth: WIDTH];
+                    /*screen_char_t *aLine = [self _getDefaultLineWithWidth: WIDTH];
                       int i;
 
                       for(i = max_scrollback_lines+HEIGHT; i < total_height; i++)

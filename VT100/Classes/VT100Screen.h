@@ -1,17 +1,4 @@
-// VT100Screen.h
-// MobileTeterminal
-//
-// This header file originally came from the iTerm project, but has been
-// modified heavily for use in MobileTerminal.  See the original copyright
-// below.
-//
-// VT100Screen represents the current state of a text screen, typically 
-// with 80 rows and 25 columns.  It also keeps some scrollback state.
-// Characters are placed on the screen by an associated VT100Terminal object
-// which has the state machine logic for parsing an input stream of characters.
-//
-// The VT100Terminal is wrapped by the VT100 class which provides a simpler
-// interface to use by the higher level text drawing components.
+// -*- mode:objc -*-
 /*
  **  VT100Screen.h
  **
@@ -36,7 +23,6 @@
  **  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#import <Foundation/Foundation.h>
 #import "VT100Terminal.h"
 #import "VT100Types.h"
 
@@ -47,7 +33,6 @@
 
 @interface VT100Screen : NSObject
 {
-  @private
     int WIDTH; // width of screen
     int HEIGHT; // height of screen
     int CURSOR_X;
@@ -58,9 +43,7 @@
     int SCROLL_BOTTOM;
     BOOL tabStop[TABWINDOW];
 
-    VT100Terminal* terminal;
-    id <ScreenBufferRefreshDelegate> refreshDelegate;
-
+    VT100Terminal *TERMINAL;
     int charset[4], saveCharset[4];
     BOOL blinkShow;
     BOOL PLAYBELL;
@@ -108,23 +91,30 @@
     int newWidth, newHeight;
     NSString *newWinTitle;
     NSString *newIconTitle;
-    BOOL bellSounding;
+    BOOL soundBell;
     int scrollUpLines;
     BOOL printPending;
+  
+    id <ScreenBufferRefreshDelegate> refreshDelegate;
 }
 
 @property (nonatomic, retain) id <ScreenBufferRefreshDelegate> refreshDelegate;
-@property (nonatomic, retain) VT100Terminal* terminal;
 
-- (id)initWithWidth:(int)width height:(int)height;
+- (id)init;
 - (void)dealloc;
+
+- (void)initScreenWithWidth:(int)width Height:(int)height;
 
 - (void)resizeWidth:(int)width height:(int)height;
 - (void)reset;
+- (void)setWidth:(int)width height:(int)height;
 - (int)width;
 - (int)height;
 - (unsigned int)scrollbackLines;
 - (void)setScrollback:(unsigned int)lineCount;
+- (void)setTerminal:(VT100Terminal *)terminal;
+- (VT100Terminal *)terminal;
+
 - (BOOL)blinkingCursor;
 - (void)setBlinkingCursor:(BOOL)flag;
 - (void)showCursor:(BOOL)show;

@@ -15,6 +15,7 @@
   VT100* vt100;
 }
 
+/*
 - (void) setUp;
 - (void) tearDown;
 
@@ -22,5 +23,6 @@
 - (void) testResize;
 - (void) testMultipleLinesWithResizing;
 - (void) testCursorPosition;
+ */
 
 @end

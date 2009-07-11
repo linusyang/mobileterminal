@@ -19,8 +19,11 @@ static const int kDefaultHeight = 25;
   self = [super init];
   if (self != nil) {
     terminal = [[VT100Terminal alloc] init];
-    screen = [[VT100Screen alloc] initWithWidth:kDefaultWidth 
-                                         height:kDefaultHeight];
+    screen = [[VT100Screen alloc] init];
+    [screen setTerminal:terminal];
+    [terminal setScreen:screen];
+
+    [screen resizeWidth:kDefaultWidth height:kDefaultHeight];
   }
   return self;
 }
@@ -85,7 +88,9 @@ static const int kDefaultHeight = 25;
 
 - (screen_char_t*)bufferForRow:(int)row
 {
-  return [screen getLineAtIndex:row];
+  int scrollBackLines = [screen numberOfLines] - [screen height];
+  int offset = scrollBackLines + row;
+  return [screen getLineAtIndex:offset];
 }
 
 @end
