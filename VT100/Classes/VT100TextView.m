@@ -2,7 +2,13 @@
 // VT100
 
 #import "VT100TextView.h"
+#import "ColorMap.h"
 #import "VT100.h"
+
+// Buffer space used to draw any particular row.  We assume that drawRect is
+// only ever called from the main thread, so we can share a buffer between
+// calls.
+static const int kMaxRowBufferSize = 200;
 
 extern void CGFontGetGlyphsForUnichars(CGFontRef, unichar[], CGGlyph[], size_t);
 
@@ -14,6 +20,7 @@ extern void CGFontGetGlyphsForUnichars(CGFontRef, unichar[], CGGlyph[], size_t);
 
 @synthesize buffer;
 @synthesize resizeDelegate;
+@synthesize colorMap;
 
 - (id)initWithCoder:(NSCoder *)decoder
 {
@@ -23,6 +30,9 @@ extern void CGFontGetGlyphsForUnichars(CGFontRef, unichar[], CGGlyph[], size_t);
     [vt100 setRefreshDelegate:self];
     self.buffer = vt100;
     [self setFont:[UIFont systemFontOfSize:[UIFont smallSystemFontSize]]];
+    self.colorMap = [[ColorMap alloc] init];
+    characterBuffer = (unichar*)malloc(sizeof(unichar) * kMaxRowBufferSize);
+    glyphBuffer = (CGGlyph*)malloc(sizeof(CGGlyph) * kMaxRowBufferSize);
   }
   return self;
 }
@@ -30,6 +40,7 @@ extern void CGFontGetGlyphsForUnichars(CGFontRef, unichar[], CGGlyph[], size_t);
 - (void)dealloc
 {
   CFRelease(cgFont);
+  [colorMap release];
   [buffer release];
   [font release];
   [super dealloc];
@@ -61,6 +72,19 @@ extern void CGFontGetGlyphsForUnichars(CGFontRef, unichar[], CGGlyph[], size_t);
   [resizeDelegate screenResizedToWidth:size.width height:size.height];
 }
 
+// Draw some characters 
+- (void)drawCharacters:(unichar*)data
+            withLength:(int)length
+               atPoint:(CGPoint)point
+            forContext:(CGContextRef)context
+{
+  NSParameterAssert(length < kMaxRowBufferSize);
+  // The glyphBuffer is only used here for converting character data into glyphs
+  // for drawing.
+  CGFontGetGlyphsForUnichars(cgFont, data, glyphBuffer, length);
+  CGContextShowGlyphsAtPoint(context, point.x, point.y, glyphBuffer, length);
+}
+
 // TODO(allen): This is by no means complete! The old PTYTextView does a lot
 // more stuff that needs to be ported -- and it also does it quite efficiently.
 - (void)drawRect:(CGRect)rect
@@ -81,24 +105,30 @@ extern void CGFontGetGlyphsForUnichars(CGFontRef, unichar[], CGGlyph[], size_t);
   // TODO(allen): This writes all characters using the same color instead of
   // the color attached to the screen_char_t.
   CGContextSetRGBFillColor(context, 1.0f, 1.0f, 1.0f, 0.8f);
-  
+    
   // Walk through the screen and output all characeters to the display
   ScreenSize screenSize = [buffer screenSize];  
-  unichar* characters = (unichar*)malloc(sizeof(unichar) * screenSize.width);
-  CGGlyph* glyphs = (CGGlyph*)malloc(sizeof(CGGlyph) * screenSize.width);
   for (int i = 0; i < screenSize.height; ++i) {
+    // Batch characters to print together based on their foreground color.  In
+    // the worst case, each character has a different character from the previous
+    // one and we make one call per character.
     screen_char_t* row = [buffer bufferForRow:i];
-    // Pull out the unicode characters, drop the colors for now
+    
+    // Assume that when we hit a null character we've hit the end of the row
     int j;
     for (j = 0; j < screenSize.width && row[j].ch != '\0'; ++j) {
-      characters[j] = row[j].ch;
+      screen_char_t* cell = &row[j];
+      characterBuffer[j] = cell->ch;
     }
     if (j == 0) {
+      // Nothing to draw on this line
       continue;
     }
-    CGFontGetGlyphsForUnichars(cgFont, characters, glyphs, j);
-    CGFloat y = font.pointSize * (i + 1);
-    CGContextShowGlyphsAtPoint(context, 0, y, glyphs, j);
+    CGPoint point = CGPointMake(0, font.pointSize * (i + 1));
+    [self drawCharacters:characterBuffer
+              withLength:j
+                 atPoint:point
+              forContext:context];
   }
 }
 

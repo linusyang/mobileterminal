@@ -6,6 +6,7 @@
 
 #import <UIKit/UIKit.h>
 
+@class ColorMap;
 @class VT100;
 @protocol ScreenBuffer;
 @protocol RefreshDelegate;
@@ -27,10 +28,18 @@
   UIFont* font;
   CGSize fontSize;
   CGFontRef cgFont;
+  
+  ColorMap* colorMap;
+  
+  // Buffer for rows
+  unichar* characterBuffer;
+  CGGlyph* glyphBuffer;
 }
 
 @property (nonatomic, retain) IBOutlet id <ScreenBuffer> buffer;
 @property (nonatomic, retain) IBOutlet id <VT100ResizeDelegate> resizeDelegate;
+@property (nonatomic, retain) IBOutlet ColorMap* colorMap;
+
 
 - (void)setFont:(UIFont*)font;
 

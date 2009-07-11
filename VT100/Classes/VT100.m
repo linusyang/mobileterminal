@@ -14,6 +14,8 @@ static const int kDefaultHeight = 25;
 
 @implementation VT100
 
+@synthesize refreshDelegate;
+
 - (id) init
 {
   self = [super init];
@@ -24,6 +26,7 @@ static const int kDefaultHeight = 25;
     [terminal setScreen:screen];
 
     [screen resizeWidth:kDefaultWidth height:kDefaultHeight];
+    [screen setRefreshDelegate:self];
   }
   return self;
 }
@@ -35,9 +38,13 @@ static const int kDefaultHeight = 25;
   [super dealloc];
 }
 
-- (void)setRefreshDelegate:(id <ScreenBufferRefreshDelegate>)refreshDelegate;
+// This object itself is the refresh delegate for the screen.  When we're
+// invoked, invoke our refresh delegate and then reset the dirty bits on the
+// screen since we should have now refreshed the screen.
+- (void)refresh
 {
-  screen.refreshDelegate = refreshDelegate;
+  [refreshDelegate refresh];
+  [screen resetDirty];
 }
 
 - (void)readInputStream:(const char*)data withLength:(unsigned int)length
@@ -48,7 +55,6 @@ static const int kDefaultHeight = 25;
   VT100TCC token;
   while((token = [terminal getNextToken]),
         token.type != VT100_WAIT && token.type != VT100CC_NULL) {
-    NSLog(@"process token");
     // process token
     if (token.type != VT100_SKIP) {
       if (token.type == VT100_NOTSUPPORT) {
@@ -62,7 +68,6 @@ static const int kDefaultHeight = 25;
   }
   // Cause the text display to determine if it should re-draw anything
   [screen.refreshDelegate refresh];
-  NSLog(@"refresh done");
 }
 
 - (void)setScreenSize:(ScreenSize)size

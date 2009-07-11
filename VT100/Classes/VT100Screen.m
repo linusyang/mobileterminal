@@ -935,7 +935,6 @@ static __inline__ screen_char_t *incrementLinePointer(
 
     // TODO(allen): Implement insert mode
     for (int idx = 0; idx < len; idx++) {
-        NSLog(@"idx=%d CURSOR_X=%d, WIDTH=%d (%c)", idx, CURSOR_X, WIDTH, buffer[idx].ch);
         // cut off in the middle of double width characters
         if (buffer[idx].ch == 0xffff) {
             buffer[idx].ch = '#';
@@ -1666,7 +1665,6 @@ static __inline__ screen_char_t *incrementLinePointer(
 - (void)setDirty
 {
     memset(dirty, 1, WIDTH *HEIGHT *sizeof(char));
-    // FIXME: should be done as via delegate/protocol
     [refreshDelegate refresh];
 }
 

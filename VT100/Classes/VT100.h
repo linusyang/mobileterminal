@@ -18,12 +18,14 @@
 // caller is expected to provide the raw terminal data into the VT100 object
 // via calls to handleInputStream.  VT100 exposes the contents of the screen by
 // implementing the ScreenBuffer protocol.
-@interface VT100 : NSObject <ScreenBuffer> {
+@interface VT100 : NSObject <ScreenBuffer, ScreenBufferRefreshDelegate> {
 @private
   VT100Screen* screen;
   VT100Terminal* terminal;
-  id <ScreenBufferRefreshDelegate>* delegate;
+  id <ScreenBufferRefreshDelegate> refreshDelegate;
 }
+
+@property (nonatomic, retain) id <ScreenBufferRefreshDelegate> refreshDelegate;
 
 // Initialize a VT100
 - (id)init;
