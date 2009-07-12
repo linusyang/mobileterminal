@@ -17,6 +17,10 @@
 		2C56B3EE100139C000A391DD /* VT100Types.h in Headers */ = {isa = PBXBuildFile; fileRef = 2CD2ED0B1001387C00083BC5 /* VT100Types.h */; };
 		2C56B3EF100139C000A391DD /* charmaps.h in Headers */ = {isa = PBXBuildFile; fileRef = 2CD2ED0A1001387000083BC5 /* charmaps.h */; };
 		2C56B4B61001534800A391DD /* VT100_Prefix.pch in Headers */ = {isa = PBXBuildFile; fileRef = 2C56B4B51001534800A391DD /* VT100_Prefix.pch */; };
+		2C7C7AA410097FE400136948 /* ColorMapTest.m in Sources */ = {isa = PBXBuildFile; fileRef = 2C7C7AA310097FE400136948 /* ColorMapTest.m */; };
+		2CA5CDD21008836C00DE1F6E /* ColorMap.m in Sources */ = {isa = PBXBuildFile; fileRef = 2CA5CDD11008836C00DE1F6E /* ColorMap.m */; };
+		2CA5CE4110088BEA00DE1F6E /* ColorMap.m in Sources */ = {isa = PBXBuildFile; fileRef = 2CA5CDD11008836C00DE1F6E /* ColorMap.m */; };
+		2CA5CE4310088BF200DE1F6E /* ColorMap.h in Headers */ = {isa = PBXBuildFile; fileRef = 2CA5CDD01008836C00DE1F6E /* ColorMap.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		2CB55A201001598D00BF518E /* VT100Test.m in Sources */ = {isa = PBXBuildFile; fileRef = 2CB55A0A1001591300BF518E /* VT100Test.m */; };
 		2CB55A5910015BC000BF518E /* VT100.m in Sources */ = {isa = PBXBuildFile; fileRef = 2CD2ED0C1001389100083BC5 /* VT100.m */; };
 		2CB55A6410015C0B00BF518E /* VT100Terminal.m in Sources */ = {isa = PBXBuildFile; fileRef = 2CD2ED0D1001389100083BC5 /* VT100Terminal.m */; };
@@ -33,6 +37,10 @@
 		1DF5F4DF0D08C38300B7A737 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		288765A40DF7441C002DB57D /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
 		2C56B4B51001534800A391DD /* VT100_Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = VT100_Prefix.pch; sourceTree = "<group>"; };
+		2C7C7AA210097FE400136948 /* ColorMapTest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ColorMapTest.h; path = Tests/ColorMapTest.h; sourceTree = "<group>"; };
+		2C7C7AA310097FE400136948 /* ColorMapTest.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = ColorMapTest.m; path = Tests/ColorMapTest.m; sourceTree = "<group>"; };
+		2CA5CDD01008836C00DE1F6E /* ColorMap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ColorMap.h; sourceTree = "<group>"; };
+		2CA5CDD11008836C00DE1F6E /* ColorMap.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ColorMap.m; sourceTree = "<group>"; };
 		2CB559DE100157B800BF518E /* VT100Tests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "VT100Tests-Info.plist"; sourceTree = "<group>"; };
 		2CB55A091001591300BF518E /* VT100Test.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = VT100Test.h; path = Tests/VT100Test.h; sourceTree = "<group>"; };
 		2CB55A0A1001591300BF518E /* VT100Test.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = VT100Test.m; path = Tests/VT100Test.m; sourceTree = "<group>"; };
@@ -82,6 +90,8 @@
 				2CD2ED111001389100083BC5 /* VT100TextView.h */,
 				2CD2ED121001389100083BC5 /* VT100TextView.m */,
 				2CD2ED131001389100083BC5 /* VT100Terminal.h */,
+				2CA5CDD01008836C00DE1F6E /* ColorMap.h */,
+				2CA5CDD11008836C00DE1F6E /* ColorMap.m */,
 			);
 			path = Classes;
 			sourceTree = "<group>";
@@ -140,6 +150,8 @@
 		2CB55A07100158E500BF518E /* Tests */ = {
 			isa = PBXGroup;
 			children = (
+				2C7C7AA210097FE400136948 /* ColorMapTest.h */,
+				2C7C7AA310097FE400136948 /* ColorMapTest.m */,
 				2CB55A091001591300BF518E /* VT100Test.h */,
 				2CB55A0A1001591300BF518E /* VT100Test.m */,
 			);
@@ -153,6 +165,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2CA5CE4310088BF200DE1F6E /* ColorMap.h in Headers */,
 				2C56B3EA100139C000A391DD /* VT100.h in Headers */,
 				2C56B3EB100139C000A391DD /* VT100Screen.h in Headers */,
 				2C56B3EC100139C000A391DD /* VT100TextView.h in Headers */,
@@ -258,6 +271,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2CA5CE4110088BEA00DE1F6E /* ColorMap.m in Sources */,
 				2CD2ED141001389100083BC5 /* VT100.m in Sources */,
 				2CD2ED151001389100083BC5 /* VT100Terminal.m in Sources */,
 				2CD2ED161001389100083BC5 /* VT100Screen.m in Sources */,
@@ -273,6 +287,8 @@
 				2CB55A6510015C0B00BF518E /* VT100Screen.m in Sources */,
 				2CB55A5910015BC000BF518E /* VT100.m in Sources */,
 				2CB55A201001598D00BF518E /* VT100Test.m in Sources */,
+				2CA5CDD21008836C00DE1F6E /* ColorMap.m in Sources */,
+				2C7C7AA410097FE400136948 /* ColorMapTest.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

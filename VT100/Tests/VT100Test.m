@@ -1,5 +1,5 @@
 // VT100Test.m
-// VT100
+// MobileTerminal
 
 #import "VT100Test.h"
 
