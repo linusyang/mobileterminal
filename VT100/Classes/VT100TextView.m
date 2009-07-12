@@ -63,10 +63,19 @@ extern void CGFontGetGlyphsForUnichars(CGFontRef, unichar[], CGGlyph[], size_t);
   // Retain the new font, and cache some of its properties that are too 
   // expensive to look up every time we draw.
   font = newFont;
-  [font retain];  
+  [font retain];
   cgFont = CGFontCreateWithFontName((CFStringRef)font.fontName);
   NSAssert(font != NULL, @"Error in CGFontCreateWithFontName");  
   fontSize = [VT100TextView computeFontSize:font];
+  // We always use the same advances for every position in a row
+  for (int i = 0; i < kMaxRowBufferSize; ++i) {
+    glyphAdvances[i] = CGSizeMake(fontSize.width, 0);
+  }
+  [self setNeedsLayout];
+}
+
+- (void)layoutSubviews
+{
   // Determine the screen size based on the font size
   CGSize frameSize = [self frame].size;
   ScreenSize size;
@@ -82,11 +91,8 @@ extern void CGFontGetGlyphsForUnichars(CGFontRef, unichar[], CGGlyph[], size_t);
   cursorHeight = [font ascender] + (0 - [font descender]);
   // The cursor height from the baseline
   cursorHeightFromBaseline = [font ascender];
-  
-  // We always use the same advances for every position in a row
-  for (int i = 0; i < kMaxRowBufferSize; ++i) {
-    glyphAdvances[i] = CGSizeMake(fontSize.width, 0);
-  }
+
+  [super layoutSubviews];
 }
 
 - (int)width
@@ -164,6 +170,13 @@ extern void CGFontGetGlyphsForUnichars(CGFontRef, unichar[], CGGlyph[], size_t);
   NSAssert(font != NULL, @"No font specified");
   
   CGContextRef context = UIGraphicsGetCurrentContext();
+  
+  // TODO(allen): Draw background color based on the character position.  For
+  // now just fill the entire screen with the same background.
+  UIColor* defaultBackgroundColor = [colorMap background];
+  [self fillRect:rect
+     withContext:context
+       withColor:[defaultBackgroundColor CGColor]];
 
   // TODO(allen): It might be nicer to embed this logic into the VT100Terminal
   // foreground/background so that it is handled by the other logic
@@ -187,10 +200,7 @@ extern void CGFontGetGlyphsForUnichars(CGFontRef, unichar[], CGGlyph[], size_t);
   // orient the text correctly.
   CGAffineTransform xform = CGAffineTransformMake(1.0, 0.0, 0.0, -1.0, 0.0, 0.0);
   CGContextSetTextMatrix(context, xform);
-  
-  // TODO(allen): Draw background color
-  // TODO(allen): Draw a cursor
-  
+    
   // Walk through the screen and output all characeters to the display
   ScreenSize screenSize = [buffer screenSize];  
   for (int i = 0; i < screenSize.height; ++i) {
