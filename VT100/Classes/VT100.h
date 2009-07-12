@@ -42,4 +42,6 @@
 - (ScreenSize)screenSize;
 - (screen_char_t*)bufferForRow:(int)row;
 
+- (ScreenPosition)cursorPosition;
+
 @end

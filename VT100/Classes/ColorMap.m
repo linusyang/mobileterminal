@@ -59,12 +59,11 @@ static const int kNumTerminalColors = 16;
     table[15] = [[UIColor colorWithRed:1.0f green:1.0f blue:1.0f alpha:1.0f] retain];
 
     background = [[UIColor colorWithRed:0.0f green:0.0f blue:0.0f alpha:1.0f] retain];
-    foreground = [[UIColor colorWithRed:1.0f green:1.0f blue:1.0f alpha:1.0f] retain];
-    NSLog(@"self=%@, fg = %@", self, foreground);
-    foregroundBold = [[UIColor colorWithRed:1.0f green:1.0f blue:0.0f alpha:1.0f] retain];
+    foreground = [[UIColor colorWithRed:1.0f green:1.0f blue:1.0f alpha:0.95f] retain];
+    foregroundBold = [[UIColor colorWithRed:1.0f green:1.0f blue:1.0f alpha:1.0f] retain];
 
     foregroundCursor = [[UIColor colorWithRed:1.0f green:0.0f blue:0.0f alpha:1.0f] retain];
-    backgroundCursor = [[UIColor colorWithRed:1.0f green:1.0f blue:0.0f alpha:1.0f] retain];
+    backgroundCursor = [[UIColor colorWithRed:1.0f green:1.0f blue:1.0f alpha:0.3f] retain];
   }
   return self;
 }

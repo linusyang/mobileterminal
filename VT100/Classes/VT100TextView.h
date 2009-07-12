@@ -15,13 +15,18 @@
 @private
   id <ScreenBuffer> buffer;
   UIFont* font;
-  CGSize fontSize;
+  CGSize fontSize;  
   CGFontRef cgFont;
+
+  // Total height of the cursor, including what dips below the baseline
+  CGFloat cursorHeight;
+  CGFloat cursorHeightFromBaseline;
   
   ColorMap* colorMap;
   
   // Buffer of characters to draw on the screen, holds up to one row
   CGGlyph* glyphBuffer;
+  CGSize* glyphAdvances;
 }
 
 @property (nonatomic, retain) IBOutlet id <ScreenBuffer> buffer;
