@@ -1,10 +1,5 @@
-//
-//  ColorMap.m
-//  VT100
-//
-//  Created by Allen Porter on 7/11/09.
-//  Copyright 2009 thebends. All rights reserved.
-//
+// ColorMap.m
+// MobileTerminal
 
 #import "ColorMap.h"
 #import "VT100Terminal.h"

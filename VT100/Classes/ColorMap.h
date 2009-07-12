@@ -1,10 +1,5 @@
-//
-//  ColorMap.h
-//  VT100
-//
-//  Created by Allen Porter on 7/11/09.
-//  Copyright 2009 thebends. All rights reserved.
-//
+// ColorMap.h
+// MobileTerminal
 
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
