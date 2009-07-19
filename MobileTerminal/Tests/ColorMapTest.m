@@ -32,7 +32,7 @@
   STAssertEqualsWithAccuracy(1.0f, components[3], 0.0001,
                              @"colors are not equal, 0.0 != %f", components[3]);
 }
-/*
+
 - (void) testWhite
 {
   UIColor* color = [colorMap color:0xff];
@@ -45,9 +45,8 @@
                              @"colors are not equal, 0.0 != %f", components[1]);
   STAssertEqualsWithAccuracy(1.0f, components[2], 0.0001,
                              @"colors are not equal, 0.0 != %f", components[2]);
-  STAssertEqualsWithAccuracy(1.0f, components[3], 0.0001,
+  STAssertEqualsWithAccuracy(0.95f, components[3], 0.0001,
                              @"colors are not equal, 0.0 != %f", components[3]);
 }
- */
 
 @end

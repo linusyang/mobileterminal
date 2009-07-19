@@ -5,7 +5,7 @@
 // components and the higher level text view components so they both do not
 // have to depend on each other.
 
-// TODO(aporter): Include the dirty bit in this struct
+// TODO(allen): Include the dirty bit in this struct
 typedef struct screen_char_t {
     unichar ch;  // the actual character
     unsigned int bg_color;  // background color

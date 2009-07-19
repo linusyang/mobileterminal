@@ -66,13 +66,13 @@ static const int kNumTerminalColors = 16;
 - (void) dealloc
 {
   for (int i = 0; i < COLOR_MAP_MAX_COLORS; ++i) {
-    [table[i] dealloc];
+    [table[i] release];
   }
-  [background dealloc];
-  [foreground dealloc];
-  [foregroundBold dealloc];
-  [foregroundCursor dealloc];
-  [backgroundCursor dealloc];
+  [background release];
+  [foreground release];
+  [foregroundBold release];
+  [foregroundCursor release];
+  [backgroundCursor release];
   [super dealloc];
 }
 

@@ -2,7 +2,7 @@
 // MobileTerminal
 
 #import <Foundation/Foundation.h>
-#import <SubProcess/PTY.h>
+#import "PTY.h"
 
 // Forks a terminal subprocess.
 @interface SubProcess : NSObject {

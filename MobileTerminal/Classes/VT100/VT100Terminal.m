@@ -1776,7 +1776,7 @@ initWithData:data
                 case 7: WRAPAROUND_MODE = mode; break;
                 case 8: AUTOREPEAT_MODE = mode; break;
                 case 9: INTERLACE_MODE = mode; break;
-                // TODO(aporter): Implement this command -- it needs to be
+                // TODO(allen): Implement this command -- it needs to be
                 // exposed via the ScreenBuffer interface
 //                case 25: [SCREEN showCursor: mode]; break;
                 case 40: allowColumnMode = mode; break;

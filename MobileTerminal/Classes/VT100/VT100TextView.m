@@ -233,7 +233,7 @@ extern void CGFontGetGlyphsForUnichars(CGFontRef, unichar[], CGGlyph[], size_t);
 {
   // Simply forward the input stream down the VT100 processor.  When it notices
   // changes to the screen, it should invoke our refresh delegate below.
-  // TODO(aporter): The ScreenBuffer interface should just deal with NSData
+  // TODO(allen): The ScreenBuffer interface should just deal with NSData
   // directly.
   [buffer readInputStream:(const char*)[data bytes] withLength:[data length]];
 }

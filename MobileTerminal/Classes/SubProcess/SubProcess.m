@@ -6,6 +6,7 @@
 #include <util.h>
 #include <sys/ttycom.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 // These are simply used to initialize the terminal and are probably thrown
 // away immediately after startup.
@@ -84,7 +85,6 @@ static int start_process(const char *path,
     // Handle the child subprocess
     // First try to use /bin/login since its a little nicer. Fall back to
     // /bin/sh if that is available.
-    // TODO(aporter): mobile
     char * login_args[] = { "login", "-fp", (char*)username, (char *)0, };
     char * sh_args[] = { "sh", (char *)0, };
     char * env[] = { "TERM=vt100", (char *)0 };

@@ -1,8 +1,0 @@
-//
-// Prefix header for all source files of the 'VT100' target in the 'VT100' project
-//
-
-#ifdef __OBJC__
-    #import <Foundation/Foundation.h>
-    #import <UIKit/UIKit.h>
-#endif
