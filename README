@@ -15,3 +15,5 @@ The history of the project is that it was started before any official header
 files were released, and therefore uses unsupported headers.  Now it is simply
 much easier to use the standard set, with a handful of minor modifications
 instead.
+
+Lets try and get a working binary ASAP, then start hacking.
